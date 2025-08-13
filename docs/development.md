@@ -112,7 +112,7 @@ INFO     (server): Listening on http://localhost:3000
 To automatically configure your GitHub App, follow these steps:
 
 1. Run the app locally by running `npm start` in your terminal.
-1. Next follow instructions to visit [http://localhost:3000](http://localhost:3000) (or your custom Glitch URL).
+1. Next follow instructions to visit [http://localhost:3000](http://localhost:3000) (or your app's Webhook URL).
 1. You should see something like this: ![Screenshot of Probot's setup wizard](/assets/img/probot-setup-wizard.png)
 1. Go ahead and click the **Register a GitHub App** button.
 1. Next, you'll get to decide on an app name that isn't already taken. Note: if you see a message "Name is already in use" although no such app exists, it means that a GitHub organization with that name exists and cannot be used as an app name.
@@ -210,7 +210,7 @@ async function startServer() {
 }
 ```
 
-The `server` instance gives you access to the express app instance (`server.expressApp`) as well as the [`Probot`](https://probot.github.io/api/latest/classes/probot.Probot.html) instance (`server.probotApp`).
+The `server` instance gives you access to the [`Probot`](https://probot.github.io/api/latest/classes/probot.Probot.html) instance (`server.probotApp`).
 
 ### Use createNodeMiddleware
 
@@ -226,7 +226,7 @@ const probot = new Probot({
   secret: "webhooksecret123",
 });
 
-const middleware = createNodeMiddleware(app, { probot });
+const middleware = await createNodeMiddleware(app, { probot });
 
 export default (req, res) => {
   middleware(req, res, () => {
@@ -242,13 +242,13 @@ If you want to read probot's configuration from the same environment variables a
 import { createNodeMiddleware, createProbot } from "probot";
 import app from "./index.js";
 
-export default createNodeMiddleware(app, { probot: createProbot() });
+export default await createNodeMiddleware(app, { probot: createProbot() });
 ```
 
 By default, `createNodeMiddleware()` uses `/api/github/webhooks` as the webhook endpoint. To customize this behaviour, you can use the `webhooksPath` option.
 
 ```js
-export default createNodeMiddleware(app, {
+export default await createNodeMiddleware(app, {
   probot: createProbot(),
   webhooksPath: "/path/to/webhook/endpoint",
 });
@@ -272,7 +272,7 @@ async function example() {
   await probot.load(app);
 
   // https://github.com/octokit/webhooks.js/#webhooksreceive
-  probot.webhooks.receive({
+  probot.receive({
     id: '123',
     name: 'issues',
     payload: { ... }
@@ -300,3 +300,42 @@ function myProbotApp(app) {
   });
 }
 ```
+
+## Using Typescript
+
+Probot has built-in support for TypeScript, requiring minimal configuration to get started.
+
+If you're using TypeScript in your app, we strongly recommend enabling the `strictNullChecks` compiler option in your `tsconfig.json`.
+
+Without this option, TypeScript may incorrectly infer some webhook payload fields as `never`. For example:
+
+```ts
+app.on("issues.opened", async (context) => {
+  // TS Error: Property 'id' does not exist on type 'never'
+  const id = context.payload.issue.id;
+});
+```
+
+This happens because the webhook types (from ` @octokit/webhooks-types`) rely on strict null checking for proper type narrowing.
+
+To fix this, add the following to your ` tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "strictNullChecks": true
+  }
+}
+```
+
+Or enable full strict mode:
+
+```json
+{
+  "compilerOptions": {
+    "strict": true
+  }
+}
+```
+
+See issue [#1581](https://github.com/probot/probot/issues/1581) for more context.

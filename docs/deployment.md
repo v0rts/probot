@@ -16,8 +16,8 @@ Every app can either be deployed stand-alone, or combined with other apps in one
 - [Register the GitHub App](#register-the-github-app)
 - [Deploy the app](#deploy-the-app)
   - [As node app](#as-node-app)
-    - [Glitch](#glitch)
     - [Heroku](#heroku)
+    - [Render](#render)
   - [As serverless function](#as-serverless-function)
     - [AWS Lambda](#aws-lambda)
     - [Azure Functions](#azure-functions)
@@ -36,7 +36,6 @@ Every app can either be deployed stand-alone, or combined with other apps in one
 Every deployment will need a [GitHub App registration](https://docs.github.com/apps).
 
 1. [Register a new GitHub App](https://github.com/settings/apps/new) with:
-
    - **Homepage URL**: the URL to the GitHub repository for your app
    - **Webhook URL**: Use `https://example.com/` for now, we'll come back in a minute to update this with the URL of your deployed app.
    - **Webhook Secret**: Generate a unique secret with (e.g. with `openssl rand -base64 32`) and save it because you'll need it in a minute to configure your Probot app.
@@ -63,25 +62,6 @@ And one of:
 
 Probot can run your app function using the `probot` binary. If your app function lives in `./app.js`, you can start it as node process using `probot run ./app.js`
 
-#### Glitch
-
-Glitch lets you host node applications for free and edit them directly in your browser. It’s great for experimentation and entirely sufficient for simple apps.
-
-1. [Create a new app on Glitch](https://glitch.com/edit/#!/new-project).
-2. Click on your app name on the top-right, press on advanced options and then on `Import from GitHub` (You will need to login with your GitHub account to enable that option). Enter the full repository name you want to import, e.g. for the [welcome app](https://github.com/behaviorbot/new-issue-welcome) it would be `behaviorbot/new-issue-welcome`. The `new-issue-welcome` app is a great template to get started with your own app, too!
-3. Next open the `.env` file and replace its content with
-   ```
-   APP_ID=<your app id>
-   WEBHOOK_SECRET=<your app secret>
-   PRIVATE_KEY_PATH=.data/private-key.pem
-   NODE_ENV=production
-   ```
-   Replace the two `<...>` placeholders with the values from your app. The `.env` file cannot be accessed or seen by others.
-4. Press the `New File` button and enter `.data/private-key.pem`. Paste the content of your GitHub App’s `private-key.pem` in there and save it. Files in the `.data` folder cannot be seen or accessed by others, so your private key is safe.
-5. That’s it, your app should have already started :thumbsup: Press on the `Show` button on top and paste the URL as the value of `Webhook URL`. Ensure that you remove `/probot` from the end of the `Webhook URL` that was just pasted.
-
-Enjoy!
-
 #### Heroku
 
 Probot runs like [any other Node app](https://devcenter.heroku.com/articles/deploying-nodejs) on Heroku. After [creating the GitHub App](#register-the-github-app):
@@ -97,7 +77,7 @@ Probot runs like [any other Node app](https://devcenter.heroku.com/articles/depl
         http://arcane-lowlands-8408.herokuapp.com/ | git@heroku.com:arcane-lowlands-8408.git
         Git remote heroku added
 
-1.  Go back to your [app settings page](https://github.com/settings/apps) and update the **Webhook URL** to the URL of your deployment, e.g. `http://arcane-lowlands-8408.herokuapp.com/`.
+1.  Go back to your [app settings page](https://github.com/settings/apps) and update the **Webhook URL** to the URL of your deployment, e.g. `http://arcane-lowlands-8408.herokuapp.com/api/github/webhooks`.
 
 1.  Configure the Heroku app, replacing the `APP_ID` and `WEBHOOK_SECRET` with the values for those variables, and setting the path for the `PRIVATE_KEY`:
 
@@ -119,6 +99,35 @@ Probot runs like [any other Node app](https://devcenter.heroku.com/articles/depl
 
          $ heroku config:set LOG_LEVEL=trace
          $ heroku logs --tail
+
+#### Render
+
+Probot runs like any other Node app on [Render](https://render.com/). After [creating the GitHub App](#register-the-github-app):
+
+1.  Sign up at [Render](https://dashboard.render.com/register) and access your dashboard.
+1.  Click "New Web Service" and select your GitHub repository.
+1.  Set the "Build Command" and "Start Command". For a typical Probot app, use:
+
+        Build Command: npm install
+        Start Command: npm start
+
+1.  Set the Instance Type to "Free" or any other type you prefer.
+
+1.  Set environment variables:
+
+        APP_ID=aaa
+        WEBHOOK_SECRET=bbb
+        PRIVATE_KEY=<paste your private key here>
+        PORT=3000
+
+    - Be sure to add `PORT=3000` because Render's default port is 10000, but Probot expects 3000.
+    - For `PRIVATE_KEY`, paste the contents of your private key directly.
+
+1.  Deploy the app by clicking the Deploy Web Service button. Render will automatically build and start your service.
+
+1.  Go back to your [app settings page](https://github.com/settings/apps) and update the **Webhook URL** to the URL of your Render deployment, including the default webhook path, e.g. `https://your-app.onrender.com/api/github/webhooks`.
+
+1.  Your app should be up and running! To verify that your app is receiving webhook data, check the "Logs" tab in the Render dashboard.
 
 ### As serverless function
 
@@ -191,7 +200,10 @@ Please add yours!
 import { createNodeMiddleware, createProbot } from "probot";
 import app from "./app.js";
 
-const middleware = createNodeMiddleware(app, { probot: createProbot() });
+const middleware = await createNodeMiddleware(app, {
+  probot: createProbot(),
+  webhooksPath: "/",
+});
 exports.probotApp = (req, res) => {
   middleware(req, res, () => {
     res.writeHead(404);
@@ -233,7 +245,7 @@ import { createNodeMiddleware, createProbot } from "probot";
 
 import app from "../../../app.js";
 
-export default createNodeMiddleware(app, {
+export default await createNodeMiddleware(app, {
   probot: createProbot(),
   webhooksPath: "/api/github/webhooks",
 });

@@ -1,20 +1,4 @@
-export type { Logger } from "pino";
-
-export { Context } from "./context.js";
-
-export { Probot } from "./probot.js";
-export { Server } from "./server/server.js";
-export { ProbotOctokit } from "./octokit/probot-octokit.js";
-export { run } from "./run.js";
-export { createNodeMiddleware } from "./create-node-middleware.js";
-export { createProbot } from "./create-probot.js";
-
-/** NOTE: exported types might change at any point in time */
-export type {
-  Options,
-  ApplicationFunction,
-  ApplicationFunctionOptions,
-} from "./types.js";
+export * from "./exports.js";
 
 declare global {
   namespace NodeJS {
@@ -23,13 +7,13 @@ declare global {
        * The App ID assigned to your GitHub App.
        * @example '1234'
        */
-      APP_ID?: string;
+      APP_ID?: string | undefined;
 
       /**
        * By default, logs are formatted for readability in development. You can
        * set this to `json` in order to disable the formatting.
        */
-      LOG_FORMAT?: "json" | "pretty";
+      LOG_FORMAT?: "json" | "pretty" | undefined;
 
       /**
        * The verbosity of logs to show when running your app, which can be
@@ -43,20 +27,21 @@ declare global {
         | "warn"
         | "error"
         | "fatal"
-        | "silent";
+        | "silent"
+        | undefined;
 
       /**
        * By default, when using the `json` format, the level printed in the log
        * records is an int (`10`, `20`, ..). This option tells the logger to
        * print level as a string: `{"level": "info"}`. Default `false`
        */
-      LOG_LEVEL_IN_STRING?: "true" | "false";
+      LOG_LEVEL_IN_STRING?: "true" | "false" | undefined;
 
       /**
        * Only relevant when `LOG_FORMAT` is set to `json`. Sets the json key for the log message.
        * @default 'msg'
        */
-      LOG_MESSAGE_KEY?: string;
+      LOG_MESSAGE_KEY?: string | undefined;
 
       /**
        * The organization where you want to register the app in the app
@@ -66,20 +51,20 @@ declare global {
        * not set, the GitHub app would be registered for the user account
        * (https://github.com/settings/apps/new).
        */
-      GH_ORG?: string;
+      GH_ORG?: string | undefined;
 
       /**
        * The hostname of your GitHub Enterprise instance.
        * @example github.mycompany.com
        */
-      GHE_HOST?: string;
+      GHE_HOST?: string | undefined;
 
       /**
        * The protocol of your GitHub Enterprise instance. Defaults to HTTPS.
        * Do not change unless you are certain.
        * @default 'https'
        */
-      GHE_PROTOCOL?: string;
+      GHE_PROTOCOL?: string | undefined;
 
       /**
        * The contents of the private key for your GitHub App. If you're unable
@@ -87,24 +72,24 @@ declare global {
        * convert the key to a single line string. See the Deployment docs for
        * provider specific usage.
        */
-      PRIVATE_KEY?: string;
+      PRIVATE_KEY?: string | undefined;
 
       /**
        * When using the `PRIVATE_KEY_PATH` environment variable, set it to the
        * path of the `.pem` file that you downloaded from your GitHub App registration.
        * @example 'path/to/key.pem'
        */
-      PRIVATE_KEY_PATH?: string;
+      PRIVATE_KEY_PATH?: string | undefined;
       /**
        * The port to start the local server on.
        * @default '3000'
        */
-      PORT?: string;
+      PORT?: string | undefined;
 
       /**
        * The host to start the local server on.
        */
-      HOST?: string;
+      HOST?: string | undefined;
 
       /**
        * Set to a `redis://` url as connection option for
@@ -113,27 +98,27 @@ declare global {
        * [cluster support for request throttling](https://github.com/octokit/plugin-throttling.js#clustering).
        * @example 'redis://:secret@redis-123.redislabs.com:12345/0'
        */
-      REDIS_URL?: string;
+      REDIS_URL?: string | undefined;
 
       /**
        * Set to a [Sentry](https://sentry.io/) DSN to report all errors thrown
        * by your app.
        * @example 'https://1234abcd@sentry.io/12345'
        */
-      SENTRY_DSN?: string;
+      SENTRY_DSN?: string | undefined;
 
       /**
        * The URL path which will receive webhooks.
        * @default '/api/github/webhooks'
        */
-      WEBHOOK_PATH?: string;
+      WEBHOOK_PATH?: string | undefined;
 
       /**
        * Allows your local development environment to receive GitHub webhook
        * events. Go to https://smee.io/new to get started.
        * @example 'https://smee.io/your-custom-url'
        */
-      WEBHOOK_PROXY_URL?: string;
+      WEBHOOK_PROXY_URL?: string | undefined;
 
       /**
        * **Required**
@@ -146,9 +131,20 @@ declare global {
        * @example 'development'
        * @default 'development'
        */
-      WEBHOOK_SECRET?: string;
+      WEBHOOK_SECRET?: string | undefined;
 
-      NODE_ENV?: string;
+      NO_SMEE_SETUP?: "true" | undefined;
+
+      PROJECT_DOMAIN?: string | undefined;
+
+      NODE_ENV?: string | undefined;
     }
+  }
+}
+
+declare module "node:http" {
+  interface IncomingMessage {
+    body?: string | Record<string, unknown> | undefined;
+    rawBody?: Buffer | undefined;
   }
 }
